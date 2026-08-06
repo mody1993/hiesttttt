@@ -57,24 +57,24 @@ process.stderr.write = (chunk, encoding, callback) => {
 };
 
 // =========================================================================
-// 📦 2. المكتبات وإعدادات الحسابات الـ 12
+// 📦 2. المكتبات وإعدادات الحسابات الـ 12 (تم تحديث المسميات هنا)
 // =========================================================================
 import wolfjs from 'wolf.js';
 const { WOLF } = wolfjs.default || wolfjs;
 
 const accounts = [
-  { identity: process.env.U1_MAIL, secret: process.env.U1_PASS },
-  { identity: process.env.U2_MAIL, secret: process.env.U2_PASS },
-  { identity: process.env.U3_MAIL, secret: process.env.U3_PASS },
-  { identity: process.env.U4_MAIL, secret: process.env.U4_PASS },
-  { identity: process.env.U5_MAIL, secret: process.env.U5_PASS },
-  { identity: process.env.U6_MAIL, secret: process.env.U6_PASS },
-  { identity: process.env.U7_MAIL, secret: process.env.U7_PASS },
-  { identity: process.env.U8_MAIL, secret: process.env.U8_PASS },
-  { identity: process.env.U9_MAIL, secret: process.env.U9_PASS },
-  { identity: process.env.U10_MAIL, secret: process.env.U10_PASS },
-  { identity: process.env.U11_MAIL, secret: process.env.U11_PASS },
-  { identity: process.env.U12_MAIL, secret: process.env.U12_PASS }
+  { identity: process.env.U_MAIL_1, secret: process.env.U_PASS_1 },
+  { identity: process.env.U_MAIL_2, secret: process.env.U_PASS_2 },
+  { identity: process.env.U_MAIL_3, secret: process.env.U_PASS_3 },
+  { identity: process.env.U_MAIL_4, secret: process.env.U_PASS_4 },
+  { identity: process.env.U_MAIL_5, secret: process.env.U_PASS_5 },
+  { identity: process.env.U_MAIL_6, secret: process.env.U_PASS_6 },
+  { identity: process.env.U_MAIL_7, secret: process.env.U_PASS_7 },
+  { identity: process.env.U_MAIL_8, secret: process.env.U_PASS_8 },
+  { identity: process.env.U_MAIL_9, secret: process.env.U_PASS_9 },
+  { identity: process.env.U_MAIL_10, secret: process.env.U_PASS_10 },
+  { identity: process.env.U_MAIL_11, secret: process.env.U_PASS_11 },
+  { identity: process.env.U_MAIL_12, secret: process.env.U_PASS_12 }
 ];
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -120,6 +120,7 @@ async function sendMessageSafe(service, roomId, text) {
 // 🤖 4. تشغيل الحسابات الـ 12 بشكل مستقل
 // =========================================================================
 accounts.forEach((acc, index) => {
+  if (!acc.identity || !acc.secret) return; // يتخطى أي حساب غير معرّف
 
   const service = new WOLF();
 
@@ -135,13 +136,10 @@ accounts.forEach((acc, index) => {
   // =====================
   function addToQueue(roomId) {
     if (!roomId) return;
-
     if (queueSet.has(roomId)) return;
 
     queueSet.add(roomId);
-
-    // 🔥 أولوية للرومات الجديدة (تدخل أول الطابور)
-    queue.unshift(roomId);
+    queue.unshift(roomId); // أولوية للرومات الجديدة
   }
 
   // =====================
@@ -152,20 +150,14 @@ accounts.forEach((acc, index) => {
     isProcessing = true;
 
     while (queue.length > 0) {
-
       const roomId = queue.shift();
       queueSet.delete(roomId);
 
       try {
-        // انضمام آمن
         await joinGroupSafe(service, roomId).catch(() => {});
-
-        // مهلة بسيطة لضمان الجاهزية بالسيرفر
         await sleep(500);
 
-        // إرسال آمن
         await sendMessageSafe(service, roomId, "!اسرق 5");
-
         console.log(`🚀 [${index + 1}] تم الإرسال بنجاح إلى الروم: ${roomId}`);
 
       } catch (err) {
@@ -205,7 +197,6 @@ accounts.forEach((acc, index) => {
     console.log(`📥 [${index + 1}] استلم الروم: ${roomId}`);
 
     addToQueue(roomId);
-
     processQueue();
   });
 
