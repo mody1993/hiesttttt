@@ -57,7 +57,7 @@ process.stderr.write = (chunk, encoding, callback) => {
 };
 
 // =========================================================================
-// 📦 2. المكتبات وإعدادات الحسابات الـ 12 (تم تحديث المسميات هنا)
+// 📦 2. المكتبات وإعدادات الحسابات الـ 12 (متطابقة مع GitHub Secrets)
 // =========================================================================
 import wolfjs from 'wolf.js';
 const { WOLF } = wolfjs.default || wolfjs;
@@ -80,14 +80,33 @@ const accounts = [
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 // =========================================================================
-// 🔥 3. استخراج Room ID ودوال التعامل الآمن مع المكتبة
+// 🔥 3. استخراج Room ID ودوال التعامل الآمن (دقيقة لمنع رقم المستخدم)
 // =========================================================================
 function extractRoomId(text = "") {
   if (!text) return null;
+
+  // 1. تنظيف النص من الأحرف والرموز الخفية
   const cleaned = text.replace(/[\u200B-\u200F\uFEFF]/g, '');
-  const match = cleaned.match(/ID\s*(\d{5,})|\((\d{5,})\)|(\d{5,})/i);
-  const id = match?.[1] || match?.[2] || match?.[3];
-  return id ? parseInt(id, 10) : null;
+
+  // 2. النمط الأدق: اسم الروم بين أقواس مربعة يليه مباشرة رقم الروم مع (ID) أو بدونها
+  // يطابق: [اسم الروم] (1234) أو [اسم الروم] (ID 123456)
+  const roomPatternMatch = cleaned.match(/\[[^\]]+\]\s*\(\s*(?:ID\s*)?(\d+)\s*\)/i);
+  if (roomPatternMatch) return parseInt(roomPatternMatch[1], 10);
+
+  // 3. البحث بعد الكلمات المفتاحية للرومات (القناة/قناة/مجموعة/channel)
+  const channelMatch = cleaned.match(/(?:القناة|قناة|مجموعة|مجموعه|group|channel)[^()]*\((\d+)\)/i);
+  if (channelMatch) return parseInt(channelMatch[1], 10);
+
+  // 4. فحص تاجات WOLF الرسمية أو روابط wolf://
+  const wolfTagMatch = cleaned.match(/\[group\s*id\s*=\s*(\d+)\]/i) || 
+                       cleaned.match(/wolf:\/\/group\?id=(\d+)/i);
+  if (wolfTagMatch) return parseInt(wolfTagMatch[1], 10);
+
+  // 5. خيار احتياطي: قص الرسالة قبل كلمة الشكر (thanks / الشكر) وأخذ الرقم الأول فقط
+  const textBeforeThanks = cleaned.split(/(?:thanks|الشكر|شكر)/i)[0];
+  const fallbackMatch = textBeforeThanks.match(/(?:ID\s*)?(\d{3,8})/i);
+  
+  return fallbackMatch ? parseInt(fallbackMatch[1], 10) : null;
 }
 
 // دالة الانضمام الآمنة
@@ -126,10 +145,10 @@ accounts.forEach((acc, index) => {
 
   // 📦 طابور + Set لكل حساب
   let queue = [];
-  let queueSet = new Set(); // منع التكرار
+  let queueSet = new Set();
   let isProcessing = false;
 
-  const DELAY = 3000; // تقليل المهلة إلى 3 ثوانٍ لسرعة التنفيذ
+  const DELAY = 3000;
 
   // =====================
   // 📥 إضافة للروم (بدون تكرار + أولوية جديدة)
