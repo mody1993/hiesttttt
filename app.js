@@ -203,9 +203,9 @@ accounts.forEach((acc, index) => {
       "";
 
     const isBonus =
-      content.includes("Bonus-Hero") ||
+      content.includes("Bonus-Mission") ||
       content.includes("معزز") ||
-      content.includes("Hero") ||
+      content.includes("Mission") ||
       content.includes("معزز إضافي");
 
     if (!isBonus) return;
