@@ -176,7 +176,7 @@ accounts.forEach((acc, index) => {
         await joinGroupSafe(service, roomId).catch(() => {});
         await sleep(500);
 
-        await sendMessageSafe(service, roomId, "!اسرق 5");
+        await sendMessageSafe(service, roomId, "!بطل 5");
         console.log(`🚀 [${index + 1}] تم الإرسال بنجاح إلى الروم: ${roomId}`);
 
       } catch (err) {
@@ -203,9 +203,9 @@ accounts.forEach((acc, index) => {
       "";
 
     const isBonus =
-      content.includes("Bonus-Heist") ||
+      content.includes("Bonus-Hero") ||
       content.includes("معزز") ||
-      content.includes("Heist") ||
+      content.includes("Hero") ||
       content.includes("معزز إضافي");
 
     if (!isBonus) return;
