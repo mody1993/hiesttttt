@@ -176,7 +176,7 @@ accounts.forEach((acc, index) => {
         await joinGroupSafe(service, roomId).catch(() => {});
         await sleep(500);
 
-        await sendMessageSafe(service, roomId, "!بطل 5");
+        await sendMessageSafe(service, roomId, "!صيد 3");
         console.log(`🚀 [${index + 1}] تم الإرسال بنجاح إلى الروم: ${roomId}`);
 
       } catch (err) {
