@@ -6,7 +6,7 @@ const { WOLF } = wolfjs.default || wolfjs;
 process.env.SUPPRESS_NO_CONFIG_WARNING = 'true';
 
 // =========================================================================
-// 🧹 1. فلترة سجلات الكونسول للتنبيهات المكررة
+// 🧹 1. فلترة سجلات الكونسول
 // =========================================================================
 const originalLog = console.log.bind(console);
 const originalWarn = console.warn.bind(console);
@@ -15,7 +15,7 @@ const originalError = console.error.bind(console);
 const HIDE_LOGS = [
   '[DEBUG]', 'Synchronise', 'Websocket', 'tipChannelSubscription',
   'No configurations found', 'SUPPRESS_NO_CONFIG_WARNING',
-  'apiKey will be required' // إخفاء التنبيه المكرر الخاص بالمكتبة
+  'apiKey will be required'
 ];
 
 function shouldHide(text) {
@@ -36,7 +36,7 @@ console.error = (...args) => {
 };
 
 // =========================================================================
-// 📦 2. الحسابات والتحقق من وجود البيانات
+// 📦 2. مصفوفة الحسابات الـ 14
 // =========================================================================
 const accounts = [
   { identity: process.env.U_MAIL_1, secret: process.env.U_PASS_1 },
@@ -50,7 +50,9 @@ const accounts = [
   { identity: process.env.U_MAIL_9, secret: process.env.U_PASS_9 },
   { identity: process.env.U_MAIL_10, secret: process.env.U_PASS_10 },
   { identity: process.env.U_MAIL_11, secret: process.env.U_PASS_11 },
-  { identity: process.env.U_MAIL_12, secret: process.env.U_PASS_12 }
+  { identity: process.env.U_MAIL_12, secret: process.env.U_PASS_12 },
+  { identity: process.env.U_MAIL_13, secret: process.env.U_PASS_13 },
+  { identity: process.env.U_MAIL_14, secret: process.env.U_PASS_14 }
 ];
 
 const sleep = (ms) => {
@@ -94,21 +96,19 @@ async function sendMessageSafe(service, roomId, text) {
 }
 
 // =========================================================================
-// 🤖 3. تشغيل الحسابات
+// 🤖 3. تشغيل الحسابات مع التقاط أخطاء المكتبة
 // =========================================================================
 async function initBots() {
-  let activeAccountsCount = 0;
-
   for (let index = 0; index < accounts.length; index++) {
     const acc = accounts[index];
 
-    // التحقق من أن القيم غير فارغة لتفادي NaN Timeout
-    if (!acc.identity || !acc.secret) {
-      console.warn(`⚠️ [حساب ${index + 1}] مفقود! لم يتم العثور على U_MAIL_${index + 1} أو U_PASS_${index + 1} في GitHub Secrets`);
+    // التحقق الدقيق من سلامة النص
+    const isInvalid = !acc.identity || !acc.secret || acc.identity.trim() === '' || acc.identity === 'undefined';
+    if (isInvalid) {
+      console.warn(`⚠️ [حساب ${index + 1}] مفقود أو غير معرف في GitHub Secrets.`);
       continue;
     }
 
-    activeAccountsCount++;
     const service = new WOLF();
 
     let queue = [];
@@ -160,6 +160,15 @@ async function initBots() {
       processQueue();
     };
 
+    // التقاط أخطاء تسجيل الدخول والشبكة لمنع حلقة NaN الداخلي للمكتبة
+    service.on('loginFailed', (err) => {
+      console.error(`❌ [حساب ${index + 1}] فشل تسجيل الدخول:`, err?.message || err);
+    });
+
+    service.on('error', (err) => {
+      console.error(`❌ [حساب ${index + 1}] خطأ اتصال في المكتبة:`, err?.message || err);
+    });
+
     service.on('message', handleMessage);
     service.on('privateMessage', handleMessage);
 
@@ -167,12 +176,13 @@ async function initBots() {
       console.log(`✅ الحساب [${index + 1}] جاهز ومتصل`);
     });
 
-    service.login(acc.identity, acc.secret);
-    await sleep(1000);
-  }
+    try {
+      service.login(acc.identity, acc.secret);
+    } catch (e) {
+      console.error(`❌ [حساب ${index + 1}] متعذر البدء:`, e.message);
+    }
 
-  if (activeAccountsCount === 0) {
-    console.error("❌ لم يتم تشغيل أي حساب! يرجى إضافة الـ Secrets داخل إعدادات Repository في GitHub.");
+    await sleep(1500); // مهلة بين الاتصالات لتفادي Rate Limit
   }
 }
 
