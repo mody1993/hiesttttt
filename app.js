@@ -36,23 +36,21 @@ console.error = (...args) => {
 };
 
 // =========================================================================
-// 📦 2. مصفوفة الحسابات الـ 14
+// 📦 2. مصفوفة توكنات الحسابات الـ 12
 // =========================================================================
 const accounts = [
-  { identity: process.env.U_MAIL_1, secret: process.env.U_PASS_1 },
-  { identity: process.env.U_MAIL_2, secret: process.env.U_PASS_2 },
-  { identity: process.env.U_MAIL_3, secret: process.env.U_PASS_3 },
-  { identity: process.env.U_MAIL_4, secret: process.env.U_PASS_4 },
-  { identity: process.env.U_MAIL_5, secret: process.env.U_PASS_5 },
-  { identity: process.env.U_MAIL_6, secret: process.env.U_PASS_6 },
-  { identity: process.env.U_MAIL_7, secret: process.env.U_PASS_7 },
-  { identity: process.env.U_MAIL_8, secret: process.env.U_PASS_8 },
-  { identity: process.env.U_MAIL_9, secret: process.env.U_PASS_9 },
-  { identity: process.env.U_MAIL_10, secret: process.env.U_PASS_10 },
-  { identity: process.env.U_MAIL_11, secret: process.env.U_PASS_11 },
-  { identity: process.env.U_MAIL_12, secret: process.env.U_PASS_12 },
-  { identity: process.env.U_MAIL_13, secret: process.env.U_PASS_13 },
-  { identity: process.env.U_MAIL_14, secret: process.env.U_PASS_14 }
+  { token: process.env.U_TOKEN_1 },
+  { token: process.env.U_TOKEN_2 },
+  { token: process.env.U_TOKEN_3 },
+  { token: process.env.U_TOKEN_4 },
+  { token: process.env.U_TOKEN_5 },
+  { token: process.env.U_TOKEN_6 },
+  { token: process.env.U_TOKEN_7 },
+  { token: process.env.U_TOKEN_8 },
+  { token: process.env.U_TOKEN_9 },
+  { token: process.env.U_TOKEN_10 },
+  { token: process.env.U_TOKEN_11 },
+  { token: process.env.U_TOKEN_12 }
 ];
 
 const sleep = (ms) => {
@@ -96,16 +94,16 @@ async function sendMessageSafe(service, roomId, text) {
 }
 
 // =========================================================================
-// 🤖 3. تشغيل الحسابات مع التقاط أخطاء المكتبة
+// 🤖 3. تشغيل الحسابات عبر Session Tokens
 // =========================================================================
 async function initBots() {
   for (let index = 0; index < accounts.length; index++) {
     const acc = accounts[index];
 
-    // التحقق الدقيق من سلامة النص
-    const isInvalid = !acc.identity || !acc.secret || acc.identity.trim() === '' || acc.identity === 'undefined';
+    // التحقق من وجود التوكن الخص بالحساب
+    const isInvalid = !acc.token || acc.token.trim() === '' || acc.token === 'undefined';
     if (isInvalid) {
-      console.warn(`⚠️ [حساب ${index + 1}] مفقود أو غير معرف في GitHub Secrets.`);
+      console.warn(`⚠️ [حساب ${index + 1}] التوكن غير موجود في GitHub Secrets (U_TOKEN_${index + 1}).`);
       continue;
     }
 
@@ -133,7 +131,7 @@ async function initBots() {
           await joinGroupSafe(service, roomId).catch(() => {});
           await sleep(1500);
 
-          await sendMessageSafe(service, roomId, "!صيد 3");
+          await sendMessageSafe(service, roomId, "!صياد 3");
           console.log(`🚀 [حساب ${index + 1}] تم الإرسال بنجاح إلى الروم: ${roomId}`);
         } catch (err) {
           console.error(`❌ [حساب ${index + 1}] خطأ في الروم (${roomId}):`, err.message || err);
@@ -160,9 +158,8 @@ async function initBots() {
       processQueue();
     };
 
-    // التقاط أخطاء تسجيل الدخول والشبكة لمنع حلقة NaN الداخلي للمكتبة
     service.on('loginFailed', (err) => {
-      console.error(`❌ [حساب ${index + 1}] فشل تسجيل الدخول:`, err?.message || err);
+      console.error(`❌ [حساب ${index + 1}] فشل التوثيق بالتوكن:`, err?.message || err);
     });
 
     service.on('error', (err) => {
@@ -173,16 +170,16 @@ async function initBots() {
     service.on('privateMessage', handleMessage);
 
     service.on('ready', () => {
-      console.log(`✅ الحساب [${index + 1}] جاهز ومتصل`);
+      console.log(`✅ الحساب [${index + 1}] متصل وجاهز عبر التوكن`);
     });
 
     try {
-      service.login(acc.identity, acc.secret);
+      service.login(acc.token);
     } catch (e) {
       console.error(`❌ [حساب ${index + 1}] متعذر البدء:`, e.message);
     }
 
-    await sleep(1500); // مهلة بين الاتصالات لتفادي Rate Limit
+    await sleep(2000); // مهلة زمنية بين الحسابات لمنع حظر الطلبات
   }
 }
 
