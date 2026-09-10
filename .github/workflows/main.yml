@@ -21,7 +21,7 @@ jobs:
         run: npm install
 
       - name: Run Bot Script
-        run: node index.js # 👈 اكتب هنا اسم ملف السكريبت الرئيسي الخاص بك (مثلاً index.js)
+        run: node app.js # 👈 اكتب هنا اسم ملف السكريبت الرئيسي الخاص بك (مثلاً index.js)
         env:
           U_MAIL_1: ${{ secrets.U_MAIL_1 }}
           U_PASS_1: ${{ secrets.U_PASS_1 }}
