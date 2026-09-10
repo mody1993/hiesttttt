@@ -6,7 +6,7 @@ const { WOLF } = wolfjs.default || wolfjs;
 process.env.SUPPRESS_NO_CONFIG_WARNING = 'true';
 
 // =========================================================================
-// 🧹 1. نظام تنظيف وفلترة سجلات الكونسول
+// 🧹 1. فلترة سجلات الكونسول للتنبيهات المكررة
 // =========================================================================
 const originalLog = console.log.bind(console);
 const originalWarn = console.warn.bind(console);
@@ -14,7 +14,8 @@ const originalError = console.error.bind(console);
 
 const HIDE_LOGS = [
   '[DEBUG]', 'Synchronise', 'Websocket', 'tipChannelSubscription',
-  'No configurations found', 'SUPPRESS_NO_CONFIG_WARNING'
+  'No configurations found', 'SUPPRESS_NO_CONFIG_WARNING',
+  'apiKey will be required' // إخفاء التنبيه المكرر الخاص بالمكتبة
 ];
 
 function shouldHide(text) {
@@ -25,21 +26,17 @@ console.log = (...args) => {
   const text = args.map(String).join(' ');
   if (!shouldHide(text)) originalLog(...args);
 };
-console.info = console.log;
-console.debug = console.log;
-
 console.warn = (...args) => {
   const text = args.map(String).join(' ');
   if (!shouldHide(text)) originalWarn(...args);
 };
-
 console.error = (...args) => {
   const text = args.map(String).join(' ');
   if (!shouldHide(text)) originalError(...args);
 };
 
 // =========================================================================
-// 📦 2. الحسابات ودوال الانتظار المحمية
+// 📦 2. الحسابات والتحقق من وجود البيانات
 // =========================================================================
 const accounts = [
   { identity: process.env.U_MAIL_1, secret: process.env.U_PASS_1 },
@@ -56,18 +53,13 @@ const accounts = [
   { identity: process.env.U_MAIL_12, secret: process.env.U_PASS_12 }
 ];
 
-// دالة انتظار محمية ضد قيم NaN والحيود لعدم إنهاء الجلسة
 const sleep = (ms) => {
   const duration = Number.isFinite(Number(ms)) && Number(ms) >= 0 ? Number(ms) : 1000;
   return new Promise(r => setTimeout(r, duration));
 };
 
-// =========================================================================
-// 🔥 3. استخراج Room ID ودوال التعامل الآمن
-// =========================================================================
 function extractRoomId(text = "") {
   if (!text) return null;
-
   const cleaned = text.replace(/[\u200B-\u200F\uFEFF]/g, '');
 
   const roomPatternMatch = cleaned.match(/\[[^\]]+\]\s*\(\s*(?:ID\s*)?(\d+)\s*\)/i);
@@ -76,14 +68,10 @@ function extractRoomId(text = "") {
   const parenthesesMatch = cleaned.match(/\((?:ID\s*)?(\d{3,8})\)/i);
   if (parenthesesMatch) return parseInt(parenthesesMatch[1], 10);
 
-  const channelMatch = cleaned.match(/(?:القناة|قناة|مجموعة|مجموعه|group|channel)[^()]*\((\d+)\)/i);
-  if (channelMatch) return parseInt(channelMatch[1], 10);
-
   const wolfTagMatch = cleaned.match(/\[group\s*id\s*=\s*(\d+)\]/i) || cleaned.match(/(?:id=|id\s*=\s*)(\d+)/i);
   if (wolfTagMatch) return parseInt(wolfTagMatch[1], 10);
 
-  const textBeforeThanks = cleaned.split(/(?:thanks|الشكر|شكر)/i)[0];
-  const fallbackMatch = textBeforeThanks.match(/\b(\d{3,8})\b/);
+  const fallbackMatch = cleaned.match(/\b(\d{3,8})\b/);
   return fallbackMatch ? parseInt(fallbackMatch[1], 10) : null;
 }
 
@@ -103,23 +91,29 @@ async function sendMessageSafe(service, roomId, text) {
   if (typeof service.sendGroupMessage === 'function') {
     return await service.sendGroupMessage(roomId, text);
   }
-  throw new Error('لم يتم العثور على دالة إرسال متوافقة');
 }
 
 // =========================================================================
-// 🤖 4. تشغيل الحسابات الـ 12 بتدرج زمني
+// 🤖 3. تشغيل الحسابات
 // =========================================================================
 async function initBots() {
+  let activeAccountsCount = 0;
+
   for (let index = 0; index < accounts.length; index++) {
     const acc = accounts[index];
-    if (!acc.identity || !acc.secret) continue;
 
+    // التحقق من أن القيم غير فارغة لتفادي NaN Timeout
+    if (!acc.identity || !acc.secret) {
+      console.warn(`⚠️ [حساب ${index + 1}] مفقود! لم يتم العثور على U_MAIL_${index + 1} أو U_PASS_${index + 1} في GitHub Secrets`);
+      continue;
+    }
+
+    activeAccountsCount++;
     const service = new WOLF();
 
     let queue = [];
     let queueSet = new Set();
     let isProcessing = false;
-    const DELAY = 3000;
 
     function addToQueue(roomId) {
       if (!roomId || queueSet.has(roomId)) return;
@@ -145,7 +139,7 @@ async function initBots() {
           console.error(`❌ [حساب ${index + 1}] خطأ في الروم (${roomId}):`, err.message || err);
         }
 
-        await sleep(DELAY);
+        await sleep(3000);
       }
 
       isProcessing = false;
@@ -154,13 +148,7 @@ async function initBots() {
     const handleMessage = async (message) => {
       if (message.isGroup) return;
 
-      const content =
-        message.body ||
-        message.content ||
-        message.text ||
-        message.message ||
-        "";
-
+      const content = message.body || message.content || message.text || "";
       const isBonus = /Bonus-Cast|معزز|Cast|معزز إضافي/i.test(content);
       if (!isBonus) return;
 
@@ -180,13 +168,14 @@ async function initBots() {
     });
 
     service.login(acc.identity, acc.secret);
-    await sleep(1000); // تأخير ثانية بين الحسابات لمنع Rate Limit
+    await sleep(1000);
+  }
+
+  if (activeAccountsCount === 0) {
+    console.error("❌ لم يتم تشغيل أي حساب! يرجى إضافة الـ Secrets داخل إعدادات Repository في GitHub.");
   }
 }
 
 initBots();
 
-// =========================================================================
-// 🔒 5. إبقاء السكريبت حياً داخل بيئة GitHub Actions
-// =========================================================================
 setInterval(() => {}, 60000);
