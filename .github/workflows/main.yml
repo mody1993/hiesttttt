@@ -40,4 +40,4 @@ jobs:
           U_TOKEN_10: ${{ secrets.U_TOKEN_10 }}
           U_TOKEN_11: ${{ secrets.U_TOKEN_11 }}
           U_TOKEN_12: ${{ secrets.U_TOKEN_12 }}
-        run: node index.js
+        run: node app.js
