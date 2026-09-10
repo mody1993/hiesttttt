@@ -147,7 +147,7 @@ async function initBots() {
       if (message.isGroup) return;
 
       const content = message.body || message.content || message.text || "";
-      const isBonus = /Bonus-Cast|معزز|Cast|معزز إضافي/i.test(content);
+      const isBonus = /Bonus-Hunt|معزز|Hunt|معزز إضافي/i.test(content);
       if (!isBonus) return;
 
       const roomId = extractRoomId(content);
